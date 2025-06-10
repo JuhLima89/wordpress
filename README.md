@@ -21,7 +21,7 @@ A infraestrutura criada inclui os seguintes recursos:
 
 ![Screenshot](Images/vpc_wordpress.png)
 
-- EM sub-redes, crie 2 sub-redes públicas e 2 sub-redes privadas
+- Em sub-redes, crie 2 sub-redes públicas e 2 sub-redes privadas
 
 ![Screenshot](Images/subredes_wordpress.png)
 
@@ -54,10 +54,11 @@ A infraestrutura criada inclui os seguintes recursos:
 - Criação padrão do MySQL
 - Escolher VPC e SG do rds criados anteriormente
 - Após criação copiar os dados abaixo no **user-data** da EC2:
-RDS_HOST
-RDS_PORT
-RDS_USER
-RDS_PASS
+
+RDS_HOST  
+RDS_PORT  
+RDS_USER  
+RDS_PASS  
 RDS_DB 
 
 ![Screenshot](Images/wordpress_db.png)
@@ -137,7 +138,7 @@ RDS_DB
 
 1. **Clone o repositório**:
    ```bash
-   git clone https://github.com/seu-usuario/seu-repositorio.git
+   git clone https://github.com/JuhLima89/wordpress
    cd seu-repositorio
    ```
 
