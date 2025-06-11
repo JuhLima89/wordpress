@@ -55,11 +55,10 @@ A infraestrutura criada inclui os seguintes recursos:
 - Escolher VPC e SG do rds criados anteriormente
 - Após criação copiar os dados abaixo no **user-data** da EC2:
 
-RDS_HOST  
-RDS_PORT  
-RDS_USER  
-RDS_PASS  
-RDS_DB 
+RDS_HOST:  
+RDS_NAME:  
+RDS_USER:  
+RDS_PASSWORD:
 
 ![Screenshot](Images/wordpress_db.png)
 

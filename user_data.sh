@@ -1,60 +1,69 @@
 #!/bin/bash
+set -ex
 
-# Atualiza o sistema
+# Atualizar o sistema
 yum update -y
 
-# Instala Docker e NFS
+# Instalar docker
 amazon-linux-extras install docker -y
-yum install -y nfs-utils
-systemctl start docker
 systemctl enable docker
+systemctl start docker
+
+# Adicionar ec2-user ao grupo docker para permitir rodar docker sem sudo
 usermod -aG docker ec2-user
 
-# Instala Docker Compose v2
-curl -L "https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+# Instalar docker-compose (versão estável)
+DOCKER_COMPOSE_VERSION="v2.20.2"
+curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
-# Monta EFS e garante montagem automática no boot
-mkdir -p /mnt/efs
-EFS_DNS=""
-mount -t nfs4 -o nfsvers=4.1 ${EFS_DNS} /mnt/efs
+# Instalar nfs-utils para montar EFS
+yum install -y nfs-utils
 
-# Adiciona entrada ao fstab se não existir
-grep -q "${EFS_DNS}" /etc/fstab || echo "${EFS_DNS} /mnt/efs nfs4 defaults,_netdev 0 0" >> /etc/fstab
+# Variáveis para EFS e RDS - editar conforme seu ambiente
+EFS_ID=""  # Substitua pelo seu EFS ID
+AWS_REGION=""  # Região do EFS e RDS
+RDS_ENDPOINT=""
+RDS_DB_NAME=""
+RDS_USERNAME=""
+RDS_PASSWORD=""
+EFS_MOUNT_POINT="/mnt/efs"
 
-# Cria diretório da aplicação
-mkdir -p /home/ec2-user/wordpress-app
-cd /home/ec2-user/wordpress-app
+# Criar diretório para montagem do EFS ANTES da montagem
+mkdir -p ${EFS_MOUNT_POINT}
+mkdir -p ${EFS_MOUNT_POINT}/wordpress
+chown -R 1000:1000 ${EFS_MOUNT_POINT}/wordpress
 
-# Define variáveis do RDS
-RDS_HOST=""
-RDS_PORT=""
-RDS_USER=""
-RDS_PASS=""
-RDS_DB=""
+# Adicionar no fstab para montar automaticamente no boot
+grep -q "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/" /etc/fstab || \
+echo "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/ ${EFS_MOUNT_POINT} nfs4 defaults,_netdev 0 0" >> /etc/fstab
 
-# Cria docker-compose.yml
-cat <<EOF > docker-compose.yml
-version: '3.3'
+# Montar EFS agora mesmo
+mount -a
 
+# Criar docker-compose.yml para o WordPress no diretório do ec2-user
+cat > /home/ec2-user/docker-compose.yml <<EOF
+version: '3.8'
 services:
   wordpress:
     image: wordpress:latest
     ports:
       - "80:80"
     environment:
-      WORDPRESS_DB_HOST: ${RDS_HOST}:${RDS_PORT}
-      WORDPRESS_DB_USER: ${RDS_USER}
-      WORDPRESS_DB_PASSWORD: ${RDS_PASS}
-      WORDPRESS_DB_NAME: ${RDS_DB}
+      WORDPRESS_DB_HOST: ${RDS_ENDPOINT}
+      WORDPRESS_DB_NAME: ${RDS_DB_NAME}
+      WORDPRESS_DB_USER: ${RDS_USERNAME}
+      WORDPRESS_DB_PASSWORD: ${RDS_PASSWORD}
     volumes:
-      - /mnt/efs/wp-content:/var/www/html/wp-content
+      - ${EFS_MOUNT_POINT}/wordpress:/var/www/html
     restart: always
 EOF
 
-# Define permissões
-chown -R ec2-user:ec2-user /home/ec2-user/wordpress-app
+# Ajustar permissões do diretório do docker-compose
+chown ec2-user:ec2-user /home/ec2-user/docker-compose.yml
 
-# Inicia o container como ec2-user
-su - ec2-user -c "cd /home/ec2-user/wordpress-app && docker-compose up -d"
+# Rodar docker-compose como ec2-user (usando o PATH correto para docker-compose)
+sudo -u ec2-user /usr/bin/docker-compose -f /home/ec2-user/docker-compose.yml up -d
+
+
