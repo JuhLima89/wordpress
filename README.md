@@ -75,6 +75,9 @@ RDS_PASSWORD:
   - Docker
   - Docker Compose
   - Deploy automático do container WordPress
+  
+    
+📜 [Clique aqui para ver o user data](./user_data.sh)
 
 ### 4. EFS (Elastic File System)
 
